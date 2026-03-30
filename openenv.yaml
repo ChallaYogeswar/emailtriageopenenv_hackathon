@@ -1,0 +1,126 @@
+name: email-triage-env
+version: "1.0.0"
+description: >
+  A real-world email triage environment where an AI agent must process an inbox:
+  classify emails by priority and category, draft appropriate replies, flag spam,
+  escalate urgent issues, and archive resolved threads. Simulates the daily workflow
+  of a customer support or operations professional.
+author: hackathon-submission
+tags:
+  - openenv
+  - email
+  - triage
+  - customer-support
+  - real-world
+
+observation_space:
+  type: object
+  description: Current inbox state plus the focused email content
+  fields:
+    inbox_summary:
+      type: array
+      description: List of email metadata objects (id, subject, sender, timestamp, read, priority_label)
+    current_email:
+      type: object
+      description: Full content of the currently focused email
+      fields:
+        id: string
+        subject: string
+        sender: string
+        timestamp: string
+        body: string
+        thread_id: string
+        attachments: array
+        labels: array
+    inbox_stats:
+      type: object
+      description: Counts of unread, urgent, spam-flagged, archived emails
+    step_number:
+      type: integer
+    task_objective:
+      type: string
+
+action_space:
+  type: object
+  description: Actions an agent can take on the current email
+  actions:
+    - name: classify
+      params:
+        priority: "enum[urgent, high, normal, low]"
+        category: "enum[billing, technical, general, spam, internal]"
+    - name: reply
+      params:
+        body: string
+        tone: "enum[formal, friendly, apologetic, escalating]"
+    - name: archive
+      params:
+        reason: "enum[resolved, irrelevant, spam]"
+    - name: escalate
+      params:
+        to: "enum[manager, legal, technical_team, billing_team]"
+        note: string
+    - name: focus
+      params:
+        email_id: string
+    - name: flag_spam
+      params:
+        confidence: "float[0.0-1.0]"
+    - name: mark_read
+      params: {}
+    - name: snooze
+      params:
+        duration_hours: integer
+    - name: noop
+      params: {}
+
+tasks:
+  - id: task_1_basic_triage
+    name: Basic Inbox Triage
+    difficulty: easy
+    description: >
+      Given a small inbox of 10 emails, correctly classify each by priority (urgent/high/normal/low)
+      and category (billing/technical/general/spam/internal). Score is based on classification accuracy.
+    max_steps: 30
+    success_threshold: 0.7
+
+  - id: task_2_reply_and_escalate
+    name: Reply and Escalate Critical Issues
+    difficulty: medium
+    description: >
+      Process a 15-email inbox containing several urgent customer issues, billing disputes,
+      and technical emergencies. Agent must: reply appropriately to general queries,
+      escalate critical issues to the right team, and flag spam. Scored on routing accuracy
+      and reply quality.
+    max_steps: 50
+    success_threshold: 0.65
+
+  - id: task_3_full_workflow
+    name: Full Customer Support Workflow
+    difficulty: hard
+    description: >
+      Handle a complex 20-email inbox with interdependencies: some emails are follow-ups to
+      earlier threads, some require multi-step actions (classify + reply + escalate),
+      some are traps (legitimate emails that look like spam). Agent must demonstrate
+      holistic reasoning across the entire inbox. Graded on end-state correctness,
+      reply quality, and zero false-positive spam flags on legitimate emails.
+    max_steps: 80
+    success_threshold: 0.60
+
+reward:
+  type: shaped
+  description: >
+    Partial credit at each step. Correct classification: +0.1, Correct reply tone: +0.05,
+    Correct escalation routing: +0.15, Spam detection (true positive): +0.1,
+    False positive spam flag: -0.2, Unnecessary escalation: -0.1,
+    Infinite loop detection: -0.3 per loop cycle after 3 repeats.
+
+endpoints:
+  reset: POST /reset
+  step: POST /step
+  state: GET /state
+  tasks: GET /tasks
+  validate: GET /validate
+
+runtime:
+  port: 7860
+  framework: fastapi
