@@ -40,6 +40,8 @@ _env = EmailTriageEnv()
 class ResetRequest(BaseModel):
     task_id: str = "task_1_basic_triage"
 
+    model_config = {"extra": "ignore"}
+
 
 class ResetResponse(BaseModel):
     observation: Observation
@@ -74,8 +76,12 @@ def health():
 
 
 @app.post("/reset", response_model=ResetResponse, tags=["openenv"])
-def reset(req: ResetRequest):
-    """Reset the environment. Returns initial observation."""
+def reset(req: Optional[ResetRequest] = None):
+    """Reset the environment. Returns initial observation.
+    Body is optional — defaults to task_1_basic_triage if omitted.
+    """
+    if req is None:
+        req = ResetRequest()
     try:
         obs = _env.reset(task_id=req.task_id)
     except ValueError as e:
