@@ -6,6 +6,8 @@ FROM python:3.11-slim
 ENV PORT=7860
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
+# Explicitly tell Python where to find modules
+ENV PYTHONPATH=/app
 
 WORKDIR /app
 
@@ -18,8 +20,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy source
-COPY . .
+# Copy every file and folder explicitly to /app root
+COPY app.py .
+COPY inference.py .
+COPY openenv.yaml .
+COPY env/ ./env/
+COPY tasks/ ./tasks/
+COPY graders/ ./graders/
 
 # Create non-root user (HF Spaces requirement)
 RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
