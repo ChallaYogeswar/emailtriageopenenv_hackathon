@@ -1,6 +1,6 @@
 """
 Deterministic graders for all 3 tasks.
-Each grader returns a score in [0.0, 1.0] and a breakdown dict.
+Each grader returns a score strictly in (0.0, 1.0) — never exactly 0 or 1.
 Graders are called by the environment and also by the /tasks endpoint.
 """
 
@@ -8,6 +8,11 @@ from __future__ import annotations
 
 from typing import Dict, List, Any
 from tasks.email_data import GROUND_TRUTH
+
+
+def _clamp(score: float) -> float:
+    """Clamp score to strictly open interval (0.0, 1.0)."""
+    return round(max(0.01, min(score, 0.99)), 4)
 
 
 def _classification_score(email_id: str, priority: str, category: str) -> float:
@@ -94,7 +99,7 @@ def grade_task1(email_states: List[Dict[str, Any]]) -> Dict[str, Any]:
 
     final = total_score / len(expected_ids) if expected_ids else 0.0
     return {
-        "score": round(min(final, 1.0), 4),
+        "score": _clamp(final),
         "breakdown": breakdown,
         "task": "task_1_basic_triage",
     }
@@ -192,7 +197,7 @@ def grade_task2(email_states: List[Dict[str, Any]], action_history: List[Dict[st
     )
 
     return {
-        "score": round(min(max(weighted, 0.0), 1.0), 4),
+        "score": _clamp(weighted),
         "breakdown": {
             "classification": round(classification_final, 4),
             "reply_quality": round(reply_final, 4),
@@ -257,7 +262,7 @@ def grade_task3(email_states: List[Dict[str, Any]], action_history: List[Dict[st
     final = min(max(base_score * 0.7 + trap_score + trap_penalty + thread_score + completeness_score, 0.0), 1.0)
 
     return {
-        "score": round(final, 4),
+        "score": _clamp(final),
         "breakdown": {
             **base["breakdown"],
             "trap_handling": round(trap_score + trap_penalty, 4),
